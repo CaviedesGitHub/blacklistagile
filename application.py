@@ -33,6 +33,36 @@ app_context=application.app_context()
 app_context.push()
 
 
+import enum
+from sqlalchemy import DateTime
+from flask_sqlalchemy import SQLAlchemy
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
+from marshmallow import fields
+from sqlalchemy.sql import func
+from sqlalchemy import Date
+
+db = SQLAlchemy()
+
+class BlackMail(db.Model):
+    __tablename__ = 'blackmail'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    email = db.Column(db.Unicode(255), nullable=False)
+    app_uuid = db.Column(db.Unicode(255), nullable=False)
+    blocked_reason = db.Column(db.Unicode(255), nullable=False)
+    ip = db.Column(db.Unicode, nullable=False)
+    createdAt = db.Column(DateTime(), nullable=False, default=func.now())
+    
+    
+class BlackMailSchema(SQLAlchemyAutoSchema):
+    class Meta:
+        model = BlackMail
+        include_relationships = True
+        load_instance = True
+
+db.init_app(application)
+db.create_all()
+
+
 from datetime import datetime
 import uuid
 from flask import request
@@ -44,7 +74,7 @@ from flask_jwt_extended.exceptions import NoAuthorizationError
 from functools import wraps
 from jwt import InvalidSignatureError, ExpiredSignatureError, InvalidTokenError
 
-#blackMail_schema = BlackMailSchema()
+blackMail_schema = BlackMailSchema()
 
 def authorization_required():
     def wrapper(fn):
@@ -67,6 +97,34 @@ def authorization_required():
         return decorator
     return wrapper
 
+class VistaBlack(Resource):   
+    @authorization_required()   
+    def post(self):
+        email=request.json.get('email', None)
+        app_uuid=request.json.get('app_uuid', None)
+        blocked_reason=request.json.get('blocked_reason', None)
+        if email==None or app_uuid==None or blocked_reason==None:
+           return {"mensaje": "Falta(n) uno o mas campos en la peticion."}, 400
+        else:
+           blackMail= BlackMail(email=request.json["email"], app_uuid=request.json["app_uuid"], blocked_reason=request.json["blocked_reason"], ip=request.remote_addr, createdAt=datetime.now())
+           db.session.add(blackMail)
+           db.session.commit()
+           return {"id": blackMail.id, "createdAt": blackMail.createdAt.isoformat()}, 201
+
+class VistaIsBlack(Resource): 
+    @authorization_required()
+    def get(self, email):
+        blackMail = BlackMail.query.filter(BlackMail.email == email).first()
+        db.session.commit()
+        if blackMail is None :
+           return  {"Msg":"eMail <<NO ESTA>> en Lista Negra."}, 200
+        else:
+           return  {"Msg":"eMail <<ESTA>> en Lista Negra."}, 200
+
+class VistaRaiz(Resource):
+    def get(self):
+        print("Hola")
+        return {"Mensaje":"Hola, Bienvenido"}, 200
 
 class VistaPing(Resource):
     def get(self):
@@ -86,10 +144,11 @@ class VistaEnv(Resource):
         }, 200
 
 api = Api(application)
-#api.add_resource(VistaBlack, '/blacklists/')
-#api.add_resource(VistaIsBlack, '/blacklists/<string:email>')
-api.add_resource(VistaPing, '/blacklists/ping')
-api.add_resource(VistaEnv, '/blacklists/env')
+api.add_resource(VistaBlack, '/blacklists/')
+api.add_resource(VistaIsBlack, '/blacklists/<string:email>')
+api.add_resource(VistaRaiz, '/')
+api.add_resource(VistaPing, '/ping')
+api.add_resource(VistaEnv, '/env')
 
 jwt = JWTManager(application)
 
