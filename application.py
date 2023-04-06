@@ -124,12 +124,12 @@ class VistaIsBlack(Resource):
 class VistaRaiz(Resource):
     def get(self):
         print("Hola")
-        return {"Mensaje":"Hola, Bienvenido"}, 200
+        return {"Mensaje":"Hola, Bienvenido De Nuevo v3.3 Inmutable"}, 200
 
 class VistaPing(Resource):
     def get(self):
         print("pong")
-        return {"Mensaje":"Pong"}, 200
+        return {"Mensaje":"Pong version 3.3 Inmutable"}, 200
 
 class VistaEnv(Resource):
     def get(self):
