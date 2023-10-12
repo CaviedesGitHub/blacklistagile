@@ -23,8 +23,8 @@ def create_app(config_name):
         HOST=os.environ['RDS_HOSTNAME']
         PORT=os.environ['RDS_PORT']
         app.config['SQLALCHEMY_DATABASE_URI']=f'postgresql://{USER}:{PASSWORD}@{HOST}:{PORT}/{NAME}'
-    else:
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://admin:admin@localhost:5432/blacklist'     
+    #else:
+    #    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://admin:admin@localhost:5432/blacklist'     
     return app
 
 
@@ -117,9 +117,9 @@ class VistaIsBlack(Resource):
         blackMail = BlackMail.query.filter(BlackMail.email == email).first()
         db.session.commit()
         if blackMail is None :
-           return  {"Msg":"eMail <<NO ESTA>> en Lista Negra."}, 200
+           return  {"Encontrado": False, "Msg":"eMail <<NO ESTA>> en Lista Negra."}, 200
         else:
-           return  {"Msg":"eMail <<ESTA>> en Lista Negra."}, 200
+           return  {"Encontrado": True, "Msg":"eMail <<ESTA>> en Lista Negra.", "Motivo":blackMail.blocked_reason}, 200
 
 class VistaRaiz(Resource):
     def get(self):
@@ -152,5 +152,5 @@ api.add_resource(VistaEnv, '/env')
 
 jwt = JWTManager(application)
 
-if __name__ == "__main__":
-    application.run(port = 5000, debug = True)
+#if __name__ == "__main__":
+#    application.run(port = 5000, debug = True)
